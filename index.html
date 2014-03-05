@@ -67,6 +67,8 @@ This project is just a hobby and is not affiliated with ImportIO.</p>
 
 <div class="highlight highlight-java"><pre><span class="kd">class</span> <span class="nc">Product</span>
 <span class="o">{</span>
+  <span class="nd">@Id</span>
+  <span class="kd">protected</span> <span class="kt">long</span> <span class="n">id</span><span class="o">;</span>
   <span class="nd">@Attribute</span><span class="o">(</span><span class="s">"name"</span><span class="o">)</span>
   <span class="kd">protected</span> <span class="n">String</span> <span class="n">name</span><span class="o">;</span>
   <span class="nd">@Attribute</span><span class="o">(</span><span class="s">"image"</span><span class="o">)</span>
@@ -83,7 +85,9 @@ This project is just a hobby and is not affiliated with ImportIO.</p>
 <a name="notes-1" class="anchor" href="#notes-1"><span class="octicon octicon-link"></span></a>Notes</h4>
 
 <ul>
-<li>The project currently supports two types: String and Money, but more will come.</li>
+<li>The project currently supports two String, Date and Money but more will come.</li>
+<li>
+<a href="https://github.com/Id" class="user-mention">@Id</a> attribute allows you to get the id of the row</li>
 </ul><h3>
 <a name="use-your-ioclient-to-query-the-server" class="anchor" href="#use-your-ioclient-to-query-the-server"><span class="octicon octicon-link"></span></a>Use your IOClient to query the server</h3>
 
