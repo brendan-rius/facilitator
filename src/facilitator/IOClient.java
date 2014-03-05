@@ -6,6 +6,7 @@ import com.importio.api.clientlite.data.Progress;
 import com.importio.api.clientlite.data.Query;
 import com.importio.api.clientlite.data.QueryMessage;
 import facilitator.annotations.Attribute;
+import facilitator.annotations.Id;
 import org.joda.money.CurrencyUnit;
 import org.joda.money.Money;
 
@@ -67,6 +68,17 @@ public class IOClient extends ImportIO
 
 		for (Field f : fields)
 			{
+				/* If the current field is annotated with @Id, then
+				 * we fill all the instances with the id and then
+				 * we skip the field since we can't have a field with
+				 * both @Attribute and @Id annotations
+				 */
+				if (this.hasIdAnnotation(f))
+					{
+						this.setIdToRows(f, results, toReturn);
+						continue;
+					}
+
 				Attribute a;
 				if ((a = this.getAttributeAnnotation(f)) != null)
 					{
@@ -104,6 +116,16 @@ public class IOClient extends ImportIO
 			}
 
 		return toReturn;
+	}
+
+	private void setIdToRows(Field f, List<Map<String, Object>> rows, List<Object> objects) throws IllegalAccessException
+	{
+		Long i = 0l;
+		for (Map<String, Object> row : rows)
+			{
+				this.setField(f, objects.get(i.intValue()), i);
+				i++;
+			}
 	}
 
 	/**
@@ -177,6 +199,21 @@ public class IOClient extends ImportIO
 			}
 
 		return null;
+	}
+
+	protected Boolean hasIdAnnotation(Field f)
+	{
+		/* Note that we also look for superclass' anotations */
+		Annotation annotations[] = f.getAnnotations();
+		for (Annotation a : annotations)
+			{
+				if (a instanceof Id)
+					{
+						return true;
+					}
+			}
+
+		return false;
 	}
 
 	/**
