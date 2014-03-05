@@ -75,7 +75,7 @@ public class IOClient extends ImportIO
 
 						if (results.get(0).containsKey(columnName)) // ugly but working since size > 0 because of early return
 							{
-								/* Is we are there, if means that not only the fiels is marked with @Attribute,
+								/* Is we are there, if means that not only the field is marked with @Attribute,
 								 * but also that the result contains the columns that the POJO asks for.
 								 */
 
@@ -230,9 +230,15 @@ public class IOClient extends ImportIO
 	 */
 	protected Type getTypeUsingColumnName(String columnName, List<Map<String, Object>> results)
 	{
+		/* Money type contains XXX/_currency */
 		if (results.get(0).containsKey(columnName + "/_currency"))
 			{
 				return Type.MONEY;
+			}
+		/* Dates contains XXX/_utc */
+		else if (results.get(0).containsKey(columnName + "/_utc"))
+			{
+				return Type.DATE;
 			}
 		else
 			{
@@ -264,6 +270,13 @@ public class IOClient extends ImportIO
 				CurrencyUnit unit = CurrencyUnit.getInstance(currencyCode);
 				BigDecimal value = BigDecimal.valueOf((Double) row.get(columnName));
 				Money toReturn = Money.of(unit, value);
+				return toReturn;
+			}
+
+		if (targetClass == Date.class)
+			{
+				/* For date, the column name should contain the timestamp */
+				Date toReturn = new Date((Long) row.get(columnName));
 				return toReturn;
 			}
 
@@ -311,7 +324,8 @@ public class IOClient extends ImportIO
 				{
 					Money.class,
 					String.class
-				});
+				}),
+		DATE(Date.class);
 
 		private List<Class> compatibilities = new ArrayList<Class>();
 
