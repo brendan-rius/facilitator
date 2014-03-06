@@ -5,6 +5,7 @@ import com.importio.api.clientlite.MessageCallback;
 import com.importio.api.clientlite.data.Progress;
 import com.importio.api.clientlite.data.Query;
 import com.importio.api.clientlite.data.QueryMessage;
+import com.spaceprogram.kittycache.KittyCache;
 import facilitator.annotations.Attribute;
 import facilitator.annotations.Id;
 import org.joda.money.CurrencyUnit;
@@ -18,12 +19,27 @@ import java.util.concurrent.CountDownLatch;
 
 public class IOClient extends ImportIO
 {
-	protected HashMap<Query, List<Map<String, Object>>> cachedQueries;
+	protected static IOClient                     instance;
+	protected        KittyCache<Query, ResultSet> cache;
+	/* Queries will be cached foo one hour */
+	protected static final Integer CACHE_TTL = 3600;
 
-	public IOClient(String userid, String apiKey)
+	public static IOClient getInstance(String userId, String apiKey)
+	{
+		if (instance == null)
+			{
+				instance = new IOClient(userId, apiKey);
+			}
+
+		return instance;
+	}
+
+	protected IOClient(String userid, String apiKey)
 	{
 		super(UUID.fromString(userid), apiKey);
-		this.cachedQueries = new HashMap<Query, List<Map<String, Object>>>();
+
+		/* We create a cache of 200 queries max with a TTL of one day */
+		this.cache = new KittyCache<Query, ResultSet>(2);
 	}
 
 	public List populate(Query query, Class toPopulate) throws Exception
@@ -43,13 +59,13 @@ public class IOClient extends ImportIO
 	public List populate(Query query, Class toPopulate, Boolean forceRefresh) throws Exception
 	{
 		/* If the query isn't cached or the user wants very-fresh data, query the server */
-		if (!this.cachedQueries.containsKey(query) || forceRefresh)
+		if (this.cache.get(query) == null || forceRefresh)
 			{
 				this.performQuery(query);
 			}
 
 		/* We retrieve results from cache (that may have been updated with forceRefresh) */
-		List<Map<String, Object>> results = this.cachedQueries.get(query);
+		ResultSet results = this.cache.get(query);
 		/* Early-return if no results */
 		if (results == null)
 			{
@@ -85,7 +101,7 @@ public class IOClient extends ImportIO
 						/* If we are there, it means that the field f is marked with @Attribute */
 						String columnName = a.value();
 
-						if (results.get(0).containsKey(columnName)) // ugly but working since size > 0 because of early return
+						if (results.hasColumn(columnName))
 							{
 								/* Is we are there, if means that not only the field is marked with @Attribute,
 								 * but also that the result contains the columns that the POJO asks for.
@@ -118,7 +134,7 @@ public class IOClient extends ImportIO
 		return toReturn;
 	}
 
-	private void setIdToRows(Field f, List<Map<String, Object>> rows, List<Object> objects) throws IllegalAccessException
+	private void setIdToRows(Field f, ResultSet rows, List<Object> objects) throws IllegalAccessException
 	{
 		Long i = 0l;
 		for (Map<String, Object> row : rows)
@@ -156,7 +172,6 @@ public class IOClient extends ImportIO
 	private void performQuery(Query query) throws Exception
 	{
 		final CountDownLatch latch = new CountDownLatch(1);
-
 		this.connect();
 
 		MessageCallback messageCallback = new MessageCallback()
@@ -166,7 +181,7 @@ public class IOClient extends ImportIO
 				if (message.getType() == QueryMessage.MessageType.MESSAGE)
 					{
 						List<Map<String, Object>> results = (List<Map<String, Object>>) ((HashMap<String, Object>) message.getData()).get("results");
-						IOClient.this.cachedQueries.put(query, results);
+						IOClient.this.cache.put(query, new ResultSet(results), CACHE_TTL);
 					}
 				if (progress.isFinished())
 					{
@@ -177,7 +192,6 @@ public class IOClient extends ImportIO
 		this.query(query, messageCallback);
 
 		latch.await();
-		this.shutdown();
 	}
 
 	/**
@@ -265,15 +279,15 @@ public class IOClient extends ImportIO
 	 * @param results
 	 * @return
 	 */
-	protected Type getTypeUsingColumnName(String columnName, List<Map<String, Object>> results)
+	protected Type getTypeUsingColumnName(String columnName, ResultSet results)
 	{
 		/* Money type contains XXX/_currency */
-		if (results.get(0).containsKey(columnName + "/_currency"))
+		if (results.hasColumn(columnName + "/_currency"))
 			{
 				return Type.MONEY;
 			}
 		/* Dates contains XXX/_utc */
-		else if (results.get(0).containsKey(columnName + "/_utc"))
+		else if (results.hasColumn(columnName + "/_utc"))
 			{
 				return Type.DATE;
 			}
