@@ -60,6 +60,8 @@ This project is just a hobby and is not affiliated with ImportIO.</p>
 </ul><h3>
 <a name="create-a-classic-importio-query" class="anchor" href="#create-a-classic-importio-query"><span class="octicon octicon-link"></span></a>Create a classic ImportIO Query.</h3>
 
+<p>Your query can be almost anything, bug some types are not currently handled. See below.</p>
+
 <h3>
 <a name="get-a-pojo-class-ready-to-handle-you-data" class="anchor" href="#get-a-pojo-class-ready-to-handle-you-data"><span class="octicon octicon-link"></span></a>Get a POJO class ready to handle you data.</h3>
 
@@ -102,13 +104,19 @@ This project is just a hobby and is not affiliated with ImportIO.</p>
 <ul>
 <li>By default, the client will cache request in memory, so if you execute the same query multiple times, it won't get fresh data. To change this behaviour pass a third argument to populate like <code>client.populate(query, Product.class, true);</code>
 </li>
-</ul><h1>
+</ul><h2>
+<a name="in-memory-caching" class="anchor" href="#in-memory-caching"><span class="octicon octicon-link"></span></a>In-memory caching</h2>
+
+<p>Facilitator automatically cache all the query you make (actually no more than 200 to save memory) with a TTL of one hour. Which means that if you call populate() again with the same query, it won't reload fresh data unless you force de refresh (passing true a the third parameter) or the TTL has expired.</p>
+
+<h1>
 <a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h1>
 
 <ul>
 <li>Original Author: <a href="https://github.com/thuzhen" class="user-mention">@thuzhen</a>
 </li>
 <li>Awesome money implementation: <a href="https://github.com/JodaOrg" class="user-mention">@JodaOrg</a> (<a href="https://github.com/JodaOrg/joda-money">https://github.com/JodaOrg/joda-money</a>)</li>
+<li>Caching uses Kitty-cache (<a href="http://code.google.com/p/kitty-cache/">http://code.google.com/p/kitty-cache/</a>)</li>
 </ul>
       </section>
       <footer>
