@@ -49,7 +49,7 @@ public class ResultSet implements Iterable<Map<String, Object>>
 			}
 		else
 			{
-				if (this.rows.get(0).containsKey(columnName))
+				if (this.getAnExampleRow().containsKey(columnName))
 					{
 						return true;
 					}
