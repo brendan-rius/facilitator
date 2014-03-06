@@ -1,8 +1,8 @@
 package facilitator;
 
-import org.joda.money.Money;
-
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * User: brendan
@@ -10,6 +10,9 @@ import java.util.*;
  * Time: 14:31
  */
 
+/**
+ * Wrapper for the list of rows returned by ImportIO
+ */
 public class ResultSet implements Iterable<Map<String, Object>>
 {
 	protected List<Map<String, Object>> rows;
@@ -58,61 +61,21 @@ public class ResultSet implements Iterable<Map<String, Object>>
 	}
 
 	/**
-	 * Return the type that should be use to parse the value depending on the
-	 * column name.
-	 * For example, for the columnName "XXX", if it exists "XXX/_currency", then
-	 * we should parse this value as being money.
+	 * This method is used so that the code is prettier.
+	 * It just returns a row of the result set that can be
+	 * used as an example row
 	 *
-	 * @param columnName
 	 * @return
 	 */
-	public Type guessColumnType(String columnName)
+	public Map<String, Object> getAnExampleRow()
 	{
-		/* Money type contains XXX/_currency */
-		if (this.hasColumn(columnName + "/_currency"))
+		if (this.size() > 0)
 			{
-				return Type.MONEY;
-			}
-		/* Dates contains XXX/_utc */
-		else if (this.hasColumn(columnName + "/_utc"))
-			{
-				return Type.DATE;
+				return this.rows.get(0);
 			}
 		else
 			{
-				return Type.STRING;
+				return null;
 			}
-	}
-
-	/**
-	 * Those types represent the different type that columns can be
-	 */
-	public static enum Type
-	{
-		STRING(String.class),
-		MONEY
-			(new Class[]
-				{
-					Money.class,
-					String.class
-				}),
-		DATE(Date.class);
-
-		private List<Class> compatibilities = new ArrayList<Class>();
-
-		Type(Class compatibilities[])
-		{
-			this.compatibilities.addAll(Arrays.asList(compatibilities));
-		}
-
-		Type(Class compatibility)
-		{
-			this.compatibilities.add(compatibility);
-		}
-
-		public Boolean isCompatibleWith(Class c)
-		{
-			return this.compatibilities.contains(c);
-		}
 	}
 }

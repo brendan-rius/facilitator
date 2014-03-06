@@ -8,18 +8,17 @@ import com.importio.api.clientlite.data.QueryMessage;
 import com.spaceprogram.kittycache.KittyCache;
 import facilitator.annotations.Attribute;
 import facilitator.annotations.Id;
-import org.joda.money.CurrencyUnit;
-import org.joda.money.Money;
+import facilitator.types.Type;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 public class IOClient extends ImportIO
 {
 	protected static IOClient                     instance;
+	protected TypeManager typeManager;
 	protected        KittyCache<Query, ResultSet> cache;
 	/* Queries will be cached foo one hour */
 	protected static final Integer CACHE_TTL = 3600;
@@ -34,12 +33,14 @@ public class IOClient extends ImportIO
 		return instance;
 	}
 
+	/* TODO: let the user customize */
 	protected IOClient(String userid, String apiKey)
 	{
 		super(UUID.fromString(userid), apiKey);
 
 		/* We create a cache of 200 queries max with a TTL of one day */
 		this.cache = new KittyCache<Query, ResultSet>(2);
+		this.typeManager = TypeManager.getClassicTypeManager();
 	}
 
 	public List populate(Query query, Class toPopulate) throws Exception
@@ -108,10 +109,8 @@ public class IOClient extends ImportIO
 								 */
 
 								/* If so, we look for the type that ImportIO gives us (currency, link, string...) */
-								ResultSet.Type type = results.guessColumnType(columnName);
-								/* We retrieve what class should we user to fit the data into the field */
-								Class compatibilityClass = this.getCompatibleClassBetweenTypeAndField(field, type);
-								if (compatibilityClass == null)
+								Type type = this.typeManager.getTypeOfColumn(results.getAnExampleRow(), columnName);
+								if (!type.isCompatibleWithfield(field))
 									{
 										/* If there's no compatible class, we can fit nothing into the field, so we skip it */
 										continue;
@@ -124,7 +123,7 @@ public class IOClient extends ImportIO
 										 * of the class "c". So first off we'll try to create an instance of
 										 * "c" depending on the value we got from ImportIO.
 										 */
-										this.setField(field, populatedObjects.get(i), this.parseValueAsInstanceOf(row, columnName, compatibilityClass));
+										this.setField(field, populatedObjects.get(i), type.getValueFromRowsAs(row, columnName, field.getType()));
 										i++;
 									}
 							}
@@ -267,72 +266,5 @@ public class IOClient extends ImportIO
 		fields.addAll(Arrays.asList(f2));
 
 		return fields;
-	}
-
-	/**
-	 * Create a new instance of "targetClass" and initialize it withs values from ImportIO's row
-	 * knowing that the columnName is "columnName".
-	 * For example, if columnName is "price" and targetClass is Money, then we'll create a new
-	 * instance of Money and parse the column "price/_currency" to get money's currency.
-	 *
-	 * @param row
-	 * @param columnName
-	 * @param targetClass
-	 * @return
-	 */
-	protected Object parseValueAsInstanceOf(Map<String, Object> row, String columnName, Class targetClass)
-	{
-		if (targetClass == Money.class)
-			{
-				/* For money, XXX represent the money like "20.3"
-				 * while XXX/_currency represent the currency unit.
-				 * We cannot use Money.parse() because of
-				 * https://github.com/JodaOrg/joda-money/issues/35
-				 */
-				String currencyCode = (String) row.get(columnName + "/_currency");
-				CurrencyUnit unit = CurrencyUnit.getInstance(currencyCode);
-				BigDecimal value = BigDecimal.valueOf((Double) row.get(columnName));
-				Money toReturn = Money.of(unit, value);
-				return toReturn;
-			}
-
-		if (targetClass == Date.class)
-			{
-				/* For date, the column name should contain the timestamp */
-				Date toReturn = new Date((Long) row.get(columnName));
-				return toReturn;
-			}
-
-		if (targetClass == String.class)
-			{
-				return row.get(columnName);
-			}
-
-		return null;
-	}
-
-	protected Class getCompatibleClassBetweenTypeAndField(Field f, ResultSet.Type t)
-	{
-		if (!t.isCompatibleWith(f.getType()) && f.getType() == String.class)
-			{
-				/* If we didn't found any compatibility between the value returned and
-				 * the field, but we know that field is of String type, then we can
-				 * still put the raw value in the field, since all returned values
-				 * are strings
-				 */
-				return String.class;
-			}
-		else if (t.isCompatibleWith(f.getType()))
-			{
-				/* If the type is compatible with the field, it means that the
-				 * field still has the right class. Just return it.
-				 */
-				return f.getType();
-			}
-		else
-			{
-				/* The field is not compatible at all, return null */
-				return null;
-			}
 	}
 }
