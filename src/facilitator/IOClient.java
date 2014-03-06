@@ -17,30 +17,35 @@ import java.util.concurrent.CountDownLatch;
 
 public class IOClient extends ImportIO
 {
-	protected static IOClient                     instance;
-	protected TypeManager typeManager;
-	protected        KittyCache<Query, ResultSet> cache;
-	/* Queries will be cached foo one hour */
-	protected static final Integer CACHE_TTL = 3600;
+	protected TypeManager                  typeManager;
+	protected KittyCache<Query, ResultSet> cache;
+	protected Integer                      cacheTTL;
 
-	public static IOClient getInstance(String userId, String apiKey)
+	public IOClient(String userId,
+	                String apiKey,
+	                Integer cacheTTL,
+	                Integer maxObjectsInCache,
+	                TypeManager typeManager)
 	{
-		if (instance == null)
-			{
-				instance = new IOClient(userId, apiKey);
-			}
+		super(UUID.fromString(userId), apiKey);
 
-		return instance;
+		this.cache = new KittyCache<Query, ResultSet>(maxObjectsInCache);
+		this.typeManager = typeManager;
+		this.cacheTTL = cacheTTL;
 	}
 
-	/* TODO: let the user customize */
-	protected IOClient(String userid, String apiKey)
+	public IOClient(String userId,
+	                String apiKey)
 	{
-		super(UUID.fromString(userid), apiKey);
+		this(userId, apiKey, 3600, 100, TypeManager.getClassicTypeManager());
+	}
 
-		/* We create a cache of 200 queries max with a TTL of one day */
-		this.cache = new KittyCache<Query, ResultSet>(2);
-		this.typeManager = TypeManager.getClassicTypeManager();
+	public IOClient(String userId,
+	                String apiKey,
+	                Integer cacheTTL,
+	                Integer maxObjectsInCache)
+	{
+		this(userId, apiKey, cacheTTL, maxObjectsInCache, TypeManager.getClassicTypeManager());
 	}
 
 	public List populate(Query query, Class toPopulate) throws Exception
@@ -180,7 +185,7 @@ public class IOClient extends ImportIO
 				if (message.getType() == QueryMessage.MessageType.MESSAGE)
 					{
 						List<Map<String, Object>> results = (List<Map<String, Object>>) ((HashMap<String, Object>) message.getData()).get("results");
-						IOClient.this.cache.put(query, new ResultSet(results), CACHE_TTL);
+						IOClient.this.cache.put(query, new ResultSet(results), IOClient.this.cacheTTL);
 					}
 				if (progress.isFinished())
 					{
