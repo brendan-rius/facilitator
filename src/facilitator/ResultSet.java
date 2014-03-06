@@ -1,8 +1,8 @@
 package facilitator;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import org.joda.money.Money;
+
+import java.util.*;
 
 /**
  * User: brendan
@@ -55,5 +55,64 @@ public class ResultSet implements Iterable<Map<String, Object>>
 						return false;
 					}
 			}
+	}
+
+	/**
+	 * Return the type that should be use to parse the value depending on the
+	 * column name.
+	 * For example, for the columnName "XXX", if it exists "XXX/_currency", then
+	 * we should parse this value as being money.
+	 *
+	 * @param columnName
+	 * @return
+	 */
+	public Type guessColumnType(String columnName)
+	{
+		/* Money type contains XXX/_currency */
+		if (this.hasColumn(columnName + "/_currency"))
+			{
+				return Type.MONEY;
+			}
+		/* Dates contains XXX/_utc */
+		else if (this.hasColumn(columnName + "/_utc"))
+			{
+				return Type.DATE;
+			}
+		else
+			{
+				return Type.STRING;
+			}
+	}
+
+	/**
+	 * Those types represent the different type that columns can be
+	 */
+	public static enum Type
+	{
+		STRING(String.class),
+		MONEY
+			(new Class[]
+				{
+					Money.class,
+					String.class
+				}),
+		DATE(Date.class);
+
+		private List<Class> compatibilities = new ArrayList<Class>();
+
+		Type(Class compatibilities[])
+		{
+			this.compatibilities.addAll(Arrays.asList(compatibilities));
+		}
+
+		Type(Class compatibility)
+		{
+			this.compatibilities.add(compatibility);
+		}
+
+		public Boolean isCompatibleWith(Class c)
+		{
+			return this.compatibilities.contains(c);
+		}
 	}
 }

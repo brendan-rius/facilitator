@@ -77,26 +77,26 @@ public class IOClient extends ImportIO
 			}
 
 		/* The list we'll return has the same size than the list of results */
-		List<Object> toReturn = this.getListFilledWithInstancesOf(toPopulate, results.size());
+		List<Object> populatedObjects = this.getListFilledWithInstancesOf(toPopulate, results.size());
 
 		/* Note that we look for superclass' fields too */
-		List<Field> fields = this.getAllFieldsOfClassAsList(toPopulate);
+		List<Field> classFields = this.getAllFieldsOfClassAsList(toPopulate);
 
-		for (Field f : fields)
+		for (Field field : classFields)
 			{
 				/* If the current field is annotated with @Id, then
 				 * we fill all the instances with the id and then
 				 * we skip the field since we can't have a field with
 				 * both @Attribute and @Id annotations
 				 */
-				if (this.hasIdAnnotation(f))
+				if (this.hasIdAnnotation(field))
 					{
-						this.setIdToRows(f, results, toReturn);
+						this.setIdToRows(field, results, populatedObjects);
 						continue;
 					}
 
 				Attribute a;
-				if ((a = this.getAttributeAnnotation(f)) != null)
+				if ((a = this.getAttributeAnnotation(field)) != null)
 					{
 						/* If we are there, it means that the field f is marked with @Attribute */
 						String columnName = a.value();
@@ -108,10 +108,10 @@ public class IOClient extends ImportIO
 								 */
 
 								/* If so, we look for the type that ImportIO gives us (currency, link, string...) */
-								Type type = this.getTypeUsingColumnName(columnName, results);
+								ResultSet.Type type = results.guessColumnType(columnName);
 								/* We retrieve what class should we user to fit the data into the field */
-								Class c = this.getCompatibleClassBetweenTypeAndField(f, type);
-								if (c == null)
+								Class compatibilityClass = this.getCompatibleClassBetweenTypeAndField(field, type);
+								if (compatibilityClass == null)
 									{
 										/* If there's no compatible class, we can fit nothing into the field, so we skip it */
 										continue;
@@ -124,14 +124,14 @@ public class IOClient extends ImportIO
 										 * of the class "c". So first off we'll try to create an instance of
 										 * "c" depending on the value we got from ImportIO.
 										 */
-										this.setField(f, toReturn.get(i), this.parseValueAsInstanceOf(row, columnName, c));
+										this.setField(field, populatedObjects.get(i), this.parseValueAsInstanceOf(row, columnName, compatibilityClass));
 										i++;
 									}
 							}
 					}
 			}
 
-		return toReturn;
+		return populatedObjects;
 	}
 
 	private void setIdToRows(Field f, ResultSet rows, List<Object> objects) throws IllegalAccessException
@@ -270,34 +270,6 @@ public class IOClient extends ImportIO
 	}
 
 	/**
-	 * Return the type that should be use to parse the value depending on the
-	 * column name.
-	 * For example, for the columnName "XXX", if it exists "XXX/_currency", then
-	 * we should parse this value as being money.
-	 *
-	 * @param columnName
-	 * @param results
-	 * @return
-	 */
-	protected Type getTypeUsingColumnName(String columnName, ResultSet results)
-	{
-		/* Money type contains XXX/_currency */
-		if (results.hasColumn(columnName + "/_currency"))
-			{
-				return Type.MONEY;
-			}
-		/* Dates contains XXX/_utc */
-		else if (results.hasColumn(columnName + "/_utc"))
-			{
-				return Type.DATE;
-			}
-		else
-			{
-				return Type.STRING;
-			}
-	}
-
-	/**
 	 * Create a new instance of "targetClass" and initialize it withs values from ImportIO's row
 	 * knowing that the columnName is "columnName".
 	 * For example, if columnName is "price" and targetClass is Money, then we'll create a new
@@ -339,7 +311,7 @@ public class IOClient extends ImportIO
 		return null;
 	}
 
-	protected Class getCompatibleClassBetweenTypeAndField(Field f, Type t)
+	protected Class getCompatibleClassBetweenTypeAndField(Field f, ResultSet.Type t)
 	{
 		if (!t.isCompatibleWith(f.getType()) && f.getType() == String.class)
 			{
@@ -362,37 +334,5 @@ public class IOClient extends ImportIO
 				/* The field is not compatible at all, return null */
 				return null;
 			}
-	}
-
-	/**
-	 * Those types represent the different type that columns can be
-	 */
-	public static enum Type
-	{
-		STRING(String.class),
-		MONEY
-			(new Class[]
-				{
-					Money.class,
-					String.class
-				}),
-		DATE(Date.class);
-
-		private List<Class> compatibilities = new ArrayList<Class>();
-
-		Type(Class compatibilities[])
-		{
-			this.compatibilities.addAll(Arrays.asList(compatibilities));
-		}
-
-		Type(Class compatibility)
-		{
-			this.compatibilities.add(compatibility);
-		}
-
-		public Boolean isCompatibleWith(Class c)
-		{
-			return this.compatibilities.contains(c);
-		}
 	}
 }
