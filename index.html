@@ -83,11 +83,30 @@ This project is just a hobby and is not affiliated with ImportIO.</p>
 <span class="o">}</span>
 </pre></div>
 
-<h4>
+<p>Some special classes such as Date and Money are handled by Facilitator, which means if your field represent a date, its class could be either Date, Long (in which case it will correspond to the timestamp), or String (it will correspond to the date as a string). Here's a quick table of compatible types and classes:</p>
+
+<table>
+<thead><tr>
+<th>Types</th>
+<th>Classes</th>
+<th>Value</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Date</td>
+<td>java.util.Date<br>Long<br>String</td>
+<td>-<br>timestamp<br>literal date</td>
+</tr>
+<tr>
+<td>Money</td>
+<td>Money<br>Double<br>String</td>
+<td>-<br>Amount of money<br>Amount of money + currency sign</td>
+</tr>
+</tbody>
+</table><h4>
 <a name="notes-1" class="anchor" href="#notes-1"><span class="octicon octicon-link"></span></a>Notes</h4>
 
 <ul>
-<li>The project currently supports two String, Date and Money but more will come.</li>
 <li>
 <a href="https://github.com/Id" class="user-mention">@Id</a> attribute allows you to get the id of the row</li>
 </ul><h3>
